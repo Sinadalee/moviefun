@@ -1,30 +1,31 @@
 // pages/api/fact.js
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
 
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export default async function handler(req, res) {
-  const { movie } = req.query;
-
-  if (!movie) return res.status(400).json({ error: "Movie not provided" });
-
   try {
-    const completion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
+    const { movie } = req.query;
+    if (!movie) return res.status(400).json({ error: "Movie not provided" });
+    if (!process.env.OPENAI_API_KEY)
+      return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
+
+    const resp = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // use any available chat model
       messages: [
         {
           role: "user",
-          content: `Give me a fun, lesser-known fact about the movie "${movie}". Keep it brief.`,
+          content: `Give one short, lesser-known fun fact about the movie "${movie}". Keep it to 1–2 sentences.`,
         },
       ],
+      temperature: 0.8,
     });
 
-    const fact = completion.data.choices[0].message.content;
+    const fact =
+      resp.choices?.[0]?.message?.content?.trim() || "No fact found.";
     res.status(200).json({ fact });
   } catch (err) {
-    res.status(500).json({ error: "Failed to generate fun fact." });
+    console.error("OpenAI error:", err);
+    res.status(500).json({ error: "Failed to generate fun fact" });
   }
 }

@@ -1,5 +1,203 @@
-# moviefun
+# MovieFun
 
-npx prisma migrate dev --name init
+A small Next.js app where users sign in with Google, set a favorite movie on first visit, and see a new OpenAI-generated fun fact about that movie on each page load.
 
+## Features
+
+- Google Sign-In with NextAuth
+- First-time prompt to store favorite movie in Postgres (via Prisma)
+- Dashboard shows:
+
+  - Name, email, and photo from Google
+  - Favorite movie from DB
+  - New fun fact about the movie on every refresh
+
+- Logout and auth-guarded dashboard route
+
+## Tech Stack
+
+- React + **Next.js**
+- **NextAuth** (Google provider) + Prisma adapter
+- **PostgreSQL** + **Prisma**
+- **OpenAI** API (Node SDK v4)
+- JavaScript (no TypeScript)
+
+## Project Structure
+
+```
+moviefun/
+├─ prisma/
+│  ├─ migrations/
+│  └─ schema.prisma
+├─ lib/
+│  └─ prisma.js
+├─ pages/
+│  ├─ api/
+│  │  ├─ auth/[...nextauth].js
+│  │  ├─ fact.js
+│  │  ├─ getUser.js
+│  │  └─ saveFavorite.js
+│  ├─ _app.js
+│  ├─ index.js
+│  └─ dashboard.js
+├─ styles/globals.css
+├─ .env.example
+├─ .gitignore
+└─ README.md
+```
+
+## Prerequisites
+
+- Node 18+
+- PostgreSQL 13+ (local or hosted)
+- Google Cloud project with OAuth Client ID
+- OpenAI API key
+
+## Setup
+
+### 1) Clone and install
+
+```bash
+git clone <your-repo-url> moviefun
+cd moviefun
+npm install
+```
+
+### 2) Postgres database
+
+Create a user and DB locally (example):
+
+```bash
 psql postgres
+```
+
+```sql
+CREATE USER moviefun_user WITH PASSWORD 'moviefun_pass';
+CREATE DATABASE moviefun_db;
+GRANT ALL PRIVILEGES ON DATABASE moviefun_db TO moviefun_user;
+\q
+```
+
+### 3) Environment variables
+
+Copy the example and fill in values:
+
+```bash
+cp .env.example .env
+```
+
+`.env` values:
+
+```
+DATABASE_URL=postgresql://moviefun_user:moviefun_pass@localhost:5432/moviefun_db
+
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+NEXTAUTH_SECRET=your-random-secret
+NEXTAUTH_URL=http://localhost:3000
+
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+Generate a secret:
+
+```bash
+openssl rand -base64 32
+```
+
+### 4) Google OAuth setup
+
+In Google Cloud Console → APIs & Services → Credentials:
+
+- Create OAuth client: **Web application**
+- Authorized redirect URI:
+
+  ```
+  http://localhost:3000/api/auth/callback/google
+  ```
+
+- Copy **Client ID** and **Client Secret** to `.env`.
+
+### 5) Prisma migrate
+
+```bash
+npx prisma migrate dev --name init
+```
+
+If you edited the schema and need a clean reset:
+
+```bash
+npx prisma migrate reset
+```
+
+Check tables/data:
+
+```bash
+npx prisma studio
+```
+
+You should see `User`, `Account`, `Session`, `VerificationToken`.
+
+### 6) Run
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+## How it works
+
+- **Index** shows a Google login button.
+- After sign-in, users are sent to **/dashboard**.
+- On first visit, if `favoriteMovie` is missing, the app prompts for it and saves to DB.
+- **/api/fact** calls OpenAI to get a fresh fun fact on every page load.
+
+## Key files
+
+### `/pages/api/auth/[...nextauth].js`
+
+Uses `@next-auth/prisma-adapter` and Google provider.
+
+### `/pages/api/fact.js` (OpenAI v4 syntax)
+
+### `/pages/dashboard.js`
+
+- Redirects unauthenticated users to `/` with `getServerSideProps`
+- Fetches and saves favorite movie
+- Fetches a new fun fact on load
+- Logout button with `signOut({ callbackUrl: "/" })`
+
+## Screenshots
+
+```
+screenshots/
+  signin.png
+  save_fav.png
+  funfact1.png
+  funfact2.png
+```
+
+Reference them in the README if you like:
+
+```
+![Sign in](./screenshots/signin.png)
+![Save favorite](./screenshots/save_fav.png)
+![Fun fact](./screenshots/funfact1.png)
+```
+
+## Notes for reviewers
+
+- Every dashboard reload requests a new fun fact to meet the assignment.
+- API keys and DB calls are kept server-side.
+- Auth-guard uses both client checks and `getServerSideProps`.
+
+## AI assistance
+
+I used ChatGPT to help with:
+
+- Project structure and scaffolding
+- NextAuth + Prisma adapter setup and schema models
+- OpenAI Node SDK v4 usage
+- Fixing common auth and Prisma migration errors
