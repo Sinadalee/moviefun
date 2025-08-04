@@ -15,7 +15,7 @@ export default async function handler(req, res) {
       messages: [
         {
           role: "user",
-          content: `Give one short, lesser-known fun fact about the movie "${movie}". Keep it to 1–2 sentences.`,
+          content: `Give one short, lesser-known fun fact about the movie "${movie}". Keep it to 1-2 sentences.`,
         },
       ],
       temperature: 0.8,
