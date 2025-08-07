@@ -15,7 +15,12 @@ export default async function handler(req, res) {
       messages: [
         {
           role: "user",
-          content: `Give one short, lesser-known fun fact about the movie "${movie}". Keep it to 1-2 sentences.`,
+          content: `Give one short, lesser-known fun fact for each movie in "[${movie}]". Keep it to 1-2 sentences. and return in format:
+          [
+            { "movie": "Movie Title", "fact": "Fun fact about the movie" },
+            { "movie": "Movie Title", "fact": "Fun fact about the movie" }
+          ]
+          for each movie in "[${movie}]". Respond with JSON only.`,
         },
       ],
       temperature: 0.8,

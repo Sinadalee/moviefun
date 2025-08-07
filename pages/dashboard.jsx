@@ -53,6 +53,30 @@ export default function Dashboard() {
     })();
   }, [session]);
 
+  useEffect(() => {
+    const email = session?.user?.email;
+    if (!email) return;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/getUser", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const user = await res.json();
+
+        await fetch("/api/saveFavorite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, movie: favoriteMovie.trim() }),
+        });
+      } catch (e) {
+        console.error("Failed to load/save user:", e);
+      }
+    })();
+  }, [favoriteMovie]);
+
   // Fetch a fresh fun fact every time the page (or favoriteMovie) loads
   useEffect(() => {
     if (!favoriteMovie) return;
@@ -66,6 +90,14 @@ export default function Dashboard() {
           { signal: controller.signal }
         );
         const data = await res.json();
+        try {
+          console.log("Fact response:", data.fact);
+          const cleaned = data.fact.replace(/```json|```/g, "").trim();
+          data.fact = JSON.parse(cleaned);
+        } catch (e) {
+          console.error("Failed to parse fact JSON:", e);
+          data.fact = "Invalid fact format.";
+        }
         setFunFact(data.fact || "No fact found.");
       } catch (e) {
         if (e.name !== "AbortError") {
@@ -109,10 +141,54 @@ export default function Dashboard() {
       <p>
         <strong>Favorite Movie:</strong> {favoriteMovie || "-"}
       </p>
-      <p>
+      <button>
+        <span
+          onClick={() =>
+            setFavoriteMovie(
+              favoriteMovie +
+                ", " +
+                window.prompt("What's your favorite movie?")
+            )
+          }
+        >
+          Add Favorite Movie
+        </span>
+      </button>
+      {/* <p>
         <strong>Fun Fact:</strong>{" "}
         {loadingFact ? "Loading fun fact..." : funFact || "-"}
-      </p>
+      </p> */}
+
+      <table>
+        <thead>
+          <tr>
+            <th>Movie</th>
+            <th>Fun Fact</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loadingFact ? (
+            <tr>
+              <td colSpan="2">Loading fun fact...</td>
+            </tr>
+          ) : !funFact || funFact.length === 0 ? (
+            <tr>
+              <td colSpan="2">No fun fact available.</td>
+            </tr>
+          ) : Array.isArray(funFact) ? (
+            funFact.map((favoriteMovie, idx) => (
+              <tr key={idx}>
+                <td>{favoriteMovie.movie}</td>
+                <td>{favoriteMovie.fact}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="2">{funFact}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
 
       <div style={{ marginTop: 24 }}>
         <button onClick={() => signOut({ callbackUrl: "/" })}>Logout</button>
